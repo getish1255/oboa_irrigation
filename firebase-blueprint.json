@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "CampaignBundle": {
+      "title": "CampaignBundle",
+      "description": "Unified campaign bundle containing all zones and schemes for real-time synchronization across devices and shared links",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "description": "Incrementing state version"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        },
+        "customAdminPassword": {
+          "type": "string",
+          "description": "Synchronized administrative password"
+        },
+        "zones": {
+          "type": "array",
+          "description": "All zone records with plan vs achievement metrics"
+        },
+        "schemes": {
+          "type": "array",
+          "description": "All irrigation scheme records"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User identifier who performed the update"
+        }
+      },
+      "required": ["version", "lastUpdated", "zones"]
+    },
+    "AdminAuditLog": {
+      "title": "AdminAuditLog",
+      "description": "Audit record of changes made by administrative users",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action executed"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of the event"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Email of admin who executed the change"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Summary of updates"
+        }
+      },
+      "required": ["action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/campaign_bundles/{bundleId}": {
+      "schema": "CampaignBundle",
+      "description": "Live campaign bundle document for real-time dashboard data"
+    },
+    "/admin_audit_logs/{logId}": {
+      "schema": "AdminAuditLog",
+      "description": "Log of administrative changes and synchronization events"
+    }
+  }
+}

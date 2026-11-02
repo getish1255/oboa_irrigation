@@ -1,0 +1,8 @@
+{
+  "name": "Remix Oromia BOA Irrigated Wheat Report",
+  "description": "Official executive monitoring and analytics report for Oromia Bureau of Agriculture irrigated wheat campaign, integrating KoboToolbox field data, multi-zone GIS mapping, and plan tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

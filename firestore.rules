@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidCampaignBundle(data) {
+      return data.version is number
+        && data.lastUpdated is string
+        && data.lastUpdated.size() <= 100
+        && data.zones is list
+        && data.zones.size() <= 200;
+    }
+
+    function isValidAuditLog(data) {
+      return data.action is string
+        && data.action.size() <= 100
+        && data.timestamp is string
+        && data.timestamp.size() <= 100;
+    }
+
+    // Shared campaign data bundle accessed in real-time across all PCs & mobile links
+    match /campaign_bundles/{bundleId} {
+      allow get: if isValidId(bundleId);
+      allow list: if false;
+      allow create, update: if isValidId(bundleId) && isValidCampaignBundle(request.resource.data);
+      allow delete: if false;
+    }
+
+    // Administrative audit logs
+    match /admin_audit_logs/{logId} {
+      allow get: if isValidId(logId);
+      allow list: if false;
+      allow create: if isValidId(logId) && isValidAuditLog(request.resource.data);
+      allow update, delete: if false;
+    }
+  }
+}
