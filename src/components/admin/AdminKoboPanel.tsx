@@ -3,6 +3,7 @@ import { ZoneRecord, IrrigationScheme, KoboConfig, Language, KoboSubmission } fr
 import { syncKoboData, DEFAULT_KOBO_CONFIG, ALL_KOBO_FORMS, KoboAssetItem } from '../../services/koboService';
 import { saveZonesToStorage, INITIAL_ZONES } from '../../data/initialData';
 import { resetServerCampaignData } from '../../services/campaignStorageService';
+import { SchemeEditorModal } from '../gis/SchemeEditorModal';
 import Papa from 'papaparse';
 import {
   RefreshCw,
@@ -18,6 +19,12 @@ import {
   Sliders,
   Database,
   ArrowRight,
+  Plus,
+  Edit3,
+  Trash2,
+  MapPin,
+  Satellite,
+  Search,
 } from 'lucide-react';
 
 interface Props {
@@ -29,6 +36,7 @@ interface Props {
 }
 
 type SectionKey =
+  | 'sec_schemes_gis'
   | 'sec_0'
   | 'sec_1'
   | 'sec_2'
@@ -58,6 +66,42 @@ export const AdminKoboPanel: React.FC<Props> = ({
   const [isDirty, setIsDirty] = useState(false);
   const [recentSubmissions, setRecentSubmissions] = useState<KoboSubmission[]>([]);
   const [availableAssets, setAvailableAssets] = useState<KoboAssetItem[]>(ALL_KOBO_FORMS);
+
+  // Irrigation Schemes GIS CRUD state
+  const [isSchemeModalOpen, setIsSchemeModalOpen] = useState(false);
+  const [editingScheme, setEditingScheme] = useState<IrrigationScheme | null>(null);
+  const [schemeSearch, setSchemeSearch] = useState('');
+  const [schemeFilterZone, setSchemeFilterZone] = useState<number | 'all'>('all');
+
+  const handleOpenAddScheme = () => {
+    setEditingScheme(null);
+    setIsSchemeModalOpen(true);
+  };
+
+  const handleOpenEditScheme = (scheme: IrrigationScheme) => {
+    setEditingScheme(scheme);
+    setIsSchemeModalOpen(true);
+  };
+
+  const handleSaveScheme = (scheme: IrrigationScheme) => {
+    const exists = schemes.some(s => s.id === scheme.id);
+    const updated = exists ? schemes.map(s => (s.id === scheme.id ? scheme : s)) : [scheme, ...schemes];
+    onUpdateSchemes(updated);
+    setSyncLogs(prev => [
+      `[${new Date().toLocaleTimeString()}] ✅ Scheme "${scheme.name}" saved & synced to Firebase Firestore across all devices.`,
+      ...prev,
+    ]);
+  };
+
+  const handleDeleteScheme = (schemeId: string) => {
+    const schemeName = schemes.find(s => s.id === schemeId)?.name || schemeId;
+    const updated = schemes.filter(s => s.id !== schemeId);
+    onUpdateSchemes(updated);
+    setSyncLogs(prev => [
+      `[${new Date().toLocaleTimeString()}] 🗑️ Scheme "${schemeName}" deleted & synced to Firebase Firestore across all devices.`,
+      ...prev,
+    ]);
+  };
 
   // Local draft of zones for editing
   const [draftZones, setDraftZones] = useState<ZoneRecord[]>(zones);
@@ -233,6 +277,7 @@ export const AdminKoboPanel: React.FC<Props> = ({
   };
 
   const sectionsList: { id: SectionKey; label: string; code: string }[] = [
+    { id: 'sec_schemes_gis', code: 'GIS Schemes', label: lang === 'om' ? '📍 Iskiimota Jallisii GIS (Add/Edit/Delete)' : '📍 Irrigation Schemes GIS (Add/Edit/Delete)' },
     { id: 'sec_0', code: 'Sec 0', label: lang === 'om' ? '0. Sosoochii (Mobilization)' : '0. Mobilization' },
     { id: 'sec_1', code: 'Sec 1', label: lang === 'om' ? '1. Galteewwan (Inputs: Seed & Fert)' : '1. Inputs (Seed & Fertilizer)' },
     { id: 'sec_2', code: 'Sec 2', label: lang === 'om' ? '2. Bu\'uuraalee Jallisii (Irrigation)' : '2. Irrigation Facilities' },
@@ -465,9 +510,159 @@ export const AdminKoboPanel: React.FC<Props> = ({
           ))}
         </div>
 
-        {/* Editable Table with Plan vs Achievement for Every Section */}
-        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-xs text-left border-collapse">
+        {selectedSection === 'sec_schemes_gis' ? (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {lang === 'om' ? 'Bulchiinsa Iskiimota Jallisii GIS' : 'Irrigation Schemes GIS Inventory Management'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {lang === 'om'
+                      ? 'Iskiimota jallisii qamadii haaraa galchi, gulaali ykn haqi. Ragaan kun yeruma sana Firestore fi Kaartaa Google Earth irratti haaroma.'
+                      : 'Add, edit, or delete irrigation schemes. Changes are saved to Firebase Firestore and immediately reflected on Google Earth across all devices.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleOpenAddScheme}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{lang === 'om' ? 'Iskiimii Haaraa Dabali' : 'Add New Irrigation Scheme'}</span>
+              </button>
+            </div>
+
+            {/* Filter toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={schemeSearch}
+                    onChange={e => setSchemeSearch(e.target.value)}
+                    placeholder={lang === 'om' ? 'Maqaa iskiimii ykn Aanaa barbaadi...' : 'Filter scheme name or woreda...'}
+                    className="pl-9 pr-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none w-56"
+                  />
+                </div>
+
+                <select
+                  value={schemeFilterZone}
+                  onChange={e => setSchemeFilterZone(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none"
+                >
+                  <option value="all">{lang === 'om' ? 'Godinaalee Hunda' : 'All Zones'}</option>
+                  {zones.map(z => (
+                    <option key={z.id} value={z.id}>
+                      {lang === 'om' ? z.name : z.nameEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <span className="text-slate-500 font-mono">
+                {schemes.filter(s => {
+                  const matchesSearch = s.name.toLowerCase().includes(schemeSearch.toLowerCase()) || s.woreda.toLowerCase().includes(schemeSearch.toLowerCase());
+                  const matchesZone = schemeFilterZone === 'all' || s.zoneId === schemeFilterZone;
+                  return matchesSearch && matchesZone;
+                }).length} / {schemes.length} {lang === 'om' ? 'iskiimota' : 'schemes listed'}
+              </span>
+            </div>
+
+            {/* Schemes Table */}
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 max-h-[500px]">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 sticky top-0 z-10 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th className="p-2.5">#</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Iskiimii Jallisii' : 'Scheme Name'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Godina' : 'Zone'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Aanaa' : 'Woreda'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'GPS (Lat, Lng)' : 'GPS Coordinates'}</th>
+                    <th className="p-2.5 text-right">{lang === 'om' ? 'Command (ha)' : 'Command (ha)'}</th>
+                    <th className="p-2.5 text-right">{lang === 'om' ? 'Qamadii (ha)' : 'Wheat Area (ha)'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Haala' : 'Status'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Wabi Bishaanii' : 'Water Supply'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Madda & Mala' : 'Source & Method'}</th>
+                    <th className="p-2.5 text-center">{lang === 'om' ? 'Paampii' : 'Pumps'}</th>
+                    <th className="p-2.5">{lang === 'om' ? 'Rakkoo' : 'Issue'}</th>
+                    <th className="p-2.5 text-right">{lang === 'om' ? 'Tarkaanfii' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                  {schemes
+                    .filter(s => {
+                      const matchesSearch = s.name.toLowerCase().includes(schemeSearch.toLowerCase()) || s.woreda.toLowerCase().includes(schemeSearch.toLowerCase());
+                      const matchesZone = schemeFilterZone === 'all' || s.zoneId === schemeFilterZone;
+                      return matchesSearch && matchesZone;
+                    })
+                    .map((s, idx) => (
+                      <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="p-2.5 font-mono text-slate-400">{idx + 1}</td>
+                        <td className="p-2.5 font-bold text-slate-900 dark:text-slate-100">{s.name}</td>
+                        <td className="p-2.5">{s.zoneName}</td>
+                        <td className="p-2.5">{s.woreda}</td>
+                        <td className="p-2.5 font-mono text-[11px] text-slate-500">
+                          {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
+                        </td>
+                        <td className="p-2.5 text-right font-mono">{s.commandAreaHa.toLocaleString()}</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                          {s.actualIrrigatedWheatHa.toLocaleString()}
+                        </td>
+                        <td className="p-2.5">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              s.status === 'functional'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                : s.status === 'partly_functional'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                            }`}
+                          >
+                            {s.status === 'functional' ? '🟢 Functional' : s.status === 'partly_functional' ? '🟡 Partly' : '🔴 Non-Func'}
+                          </span>
+                        </td>
+                        <td className="p-2.5 capitalize">{s.waterAvailability}</td>
+                        <td className="p-2.5 text-[11px]">{s.waterSource} ({s.method})</td>
+                        <td className="p-2.5 text-center font-mono text-[11px]">{s.pumpsFunctional} / {s.pumpsTotal}</td>
+                        <td className="p-2.5 text-[11px]">
+                          {s.operationalProblem === 'None' ? <span className="text-slate-400">None</span> : <span className="text-rose-600 font-semibold">{s.operationalProblem}</span>}
+                        </td>
+                        <td className="p-2.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditScheme(s)}
+                              className="px-2 py-1 text-[11px] font-semibold rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 cursor-pointer"
+                              title="Edit Scheme Details"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>{lang === 'om' ? 'Gulaali' : 'Edit'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteScheme(s.id)}
+                              className="p-1 rounded hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 cursor-pointer"
+                              title="Delete Scheme"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          /* Editable Table with Plan vs Achievement for Every Section */
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+            <table className="w-full text-xs text-left border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="p-2.5">ID</th>
@@ -1180,7 +1375,19 @@ export const AdminKoboPanel: React.FC<Props> = ({
             </tbody>
           </table>
         </div>
+        )}
       </div>
+
+      {/* Scheme Editor Modal for Admin */}
+      <SchemeEditorModal
+        isOpen={isSchemeModalOpen}
+        onClose={() => setIsSchemeModalOpen(false)}
+        onSave={handleSaveScheme}
+        onDelete={handleDeleteScheme}
+        initialScheme={editingScheme}
+        zones={zones}
+        lang={lang}
+      />
     </div>
   );
 };

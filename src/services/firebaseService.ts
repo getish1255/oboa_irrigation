@@ -160,18 +160,20 @@ export function subscribeToCampaignUpdates(
  * Save updated campaign bundle to Firestore to broadcast to all devices immediately
  */
 export async function saveCampaignBundleToFirestore(
-  bundle: Partial<SharedCampaignBundle> & { zones: ZoneRecord[] }
+  bundle: Partial<SharedCampaignBundle>
 ): Promise<boolean> {
   try {
     const docRef = doc(db, 'campaign_bundles', 'live');
     const existingSnap = await getDoc(docRef);
     let currentVersion = 1;
+    let existingZones: ZoneRecord[] = INITIAL_ZONES;
     let existingSchemes: IrrigationScheme[] = INITIAL_SCHEMES;
     let existingPwd = '';
 
     if (existingSnap.exists()) {
       const existingData = existingSnap.data() as SharedCampaignBundle;
       currentVersion = (existingData.version || 1) + 1;
+      if (Array.isArray(existingData.zones) && existingData.zones.length > 0) existingZones = existingData.zones;
       if (Array.isArray(existingData.schemes)) existingSchemes = existingData.schemes;
       if (existingData.customAdminPassword) existingPwd = existingData.customAdminPassword;
     }
@@ -179,7 +181,7 @@ export async function saveCampaignBundleToFirestore(
     const payload: SharedCampaignBundle = {
       version: bundle.version || currentVersion,
       lastUpdated: new Date().toISOString(),
-      zones: bundle.zones,
+      zones: bundle.zones || existingZones,
       schemes: bundle.schemes || existingSchemes,
       customAdminPassword: bundle.customAdminPassword || existingPwd,
       updatedBy: bundle.updatedBy || 'Oromia BOA Admin Portal',

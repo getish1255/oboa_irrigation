@@ -521,7 +521,13 @@ export default function App() {
         )}
 
         {activeTab === 'gis_map' && (
-          <OromiaGisMap schemes={displayedSchemes} lang={lang} />
+          <OromiaGisMap
+            schemes={displayedSchemes}
+            allSchemes={schemes}
+            zones={zones}
+            onUpdateSchemes={handleUpdateSchemes}
+            lang={lang}
+          />
         )}
 
         {activeTab === 'mechanization' && (

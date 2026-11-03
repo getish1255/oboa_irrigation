@@ -161,13 +161,11 @@ export async function saveSchemesToServer(
   let firestoreSuccess = false;
 
   try {
-    if (zones) {
-      firestoreSuccess = await saveCampaignBundleToFirestore({
-        zones,
-        schemes,
-        lastUpdated: new Date().toISOString(),
-      });
-    }
+    firestoreSuccess = await saveCampaignBundleToFirestore({
+      schemes,
+      zones,
+      lastUpdated: new Date().toISOString(),
+    });
   } catch (err) {
     console.error('Firestore scheme save failed:', err);
   }
