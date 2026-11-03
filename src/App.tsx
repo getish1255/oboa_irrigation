@@ -43,6 +43,7 @@ import {
   subscribeToRealtimeCampaignData,
 } from './services/campaignStorageService';
 import { testConnection } from './services/firebaseService';
+import { GlobalSearchBar } from './components/common/GlobalSearchBar';
 import oromiaLogo from './assets/logo.png';
 
 // Icons
@@ -204,6 +205,20 @@ export default function App() {
     ? schemes
     : schemes.filter(s => s.zoneId === selectedZoneFilter);
 
+  const [searchedScheme, setSearchedScheme] = useState<IrrigationScheme | null>(null);
+
+  // Global search navigation handlers
+  const handleGlobalSelectZone = (zoneId: number) => {
+    setSelectedZoneFilter(zoneId);
+    setActiveTab('regional_exec');
+  };
+
+  const handleGlobalSelectScheme = (scheme: IrrigationScheme) => {
+    setSearchedScheme(scheme);
+    setSelectedZoneFilter('all');
+    setActiveTab('gis_map');
+  };
+
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Printable summary handler
@@ -278,8 +293,19 @@ export default function App() {
             </div>
           </button>
 
+          {/* Global Search Bar (Quickly find zones or irrigation schemes by name) */}
+          <div className="flex-1 max-w-xs sm:max-w-sm md:max-w-md mx-2">
+            <GlobalSearchBar
+              zones={zones}
+              schemes={schemes}
+              lang={lang}
+              onSelectZone={handleGlobalSelectZone}
+              onSelectScheme={handleGlobalSelectScheme}
+            />
+          </div>
+
           {/* Zone 2: 4-5 concise single-line text nav links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600 dark:text-slate-400">
+          <nav className="hidden xl:flex items-center gap-5 text-xs font-semibold text-slate-600 dark:text-slate-400">
             <button
               onClick={() => setActiveTab('regional_exec')}
               className={`hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors whitespace-nowrap shrink-0 ${
@@ -526,6 +552,7 @@ export default function App() {
             allSchemes={schemes}
             zones={zones}
             onUpdateSchemes={handleUpdateSchemes}
+            selectedSchemeFromSearch={searchedScheme}
             lang={lang}
           />
         )}

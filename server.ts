@@ -3,7 +3,6 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { INITIAL_ZONES, INITIAL_SCHEMES } from './src/data/initialData';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +17,8 @@ const DATA_DIR = path.resolve(__dirname, 'server_data');
 const ZONES_FILE = path.join(DATA_DIR, 'campaign_zones.json');
 const SCHEMES_FILE = path.join(DATA_DIR, 'campaign_schemes.json');
 const META_FILE = path.join(DATA_DIR, 'campaign_meta.json');
+const SEED_ZONES_FILE = path.join(DATA_DIR, 'seed_zones.json');
+const SEED_SCHEMES_FILE = path.join(DATA_DIR, 'seed_schemes.json');
 
 // Ensure storage directory exists
 if (!fs.existsSync(DATA_DIR)) {
@@ -36,17 +37,23 @@ try {
   if (fs.existsSync(ZONES_FILE)) {
     const raw = fs.readFileSync(ZONES_FILE, 'utf-8');
     serverZones = JSON.parse(raw);
-  } else {
-    serverZones = INITIAL_ZONES;
+  } else if (fs.existsSync(SEED_ZONES_FILE)) {
+    const raw = fs.readFileSync(SEED_ZONES_FILE, 'utf-8');
+    serverZones = JSON.parse(raw);
     fs.writeFileSync(ZONES_FILE, JSON.stringify(serverZones, null, 2), 'utf-8');
+  } else {
+    serverZones = [];
   }
 
   if (fs.existsSync(SCHEMES_FILE)) {
     const raw = fs.readFileSync(SCHEMES_FILE, 'utf-8');
     serverSchemes = JSON.parse(raw);
-  } else {
-    serverSchemes = INITIAL_SCHEMES;
+  } else if (fs.existsSync(SEED_SCHEMES_FILE)) {
+    const raw = fs.readFileSync(SEED_SCHEMES_FILE, 'utf-8');
+    serverSchemes = JSON.parse(raw);
     fs.writeFileSync(SCHEMES_FILE, JSON.stringify(serverSchemes, null, 2), 'utf-8');
+  } else {
+    serverSchemes = [];
   }
 
   if (fs.existsSync(META_FILE)) {
@@ -72,8 +79,8 @@ try {
   }
 } catch (err) {
   console.error('Error initializing server campaign storage:', err);
-  serverZones = INITIAL_ZONES;
-  serverSchemes = INITIAL_SCHEMES;
+  serverZones = [];
+  serverSchemes = [];
 }
 
 function persistMeta() {
@@ -173,8 +180,12 @@ app.get('/api/campaign/status', (req, res) => {
 // 5. Reset to Bureau Baseline Dataset
 app.post('/api/campaign/reset', (req, res) => {
   try {
-    serverZones = INITIAL_ZONES;
-    serverSchemes = INITIAL_SCHEMES;
+    if (fs.existsSync(SEED_ZONES_FILE)) {
+      serverZones = JSON.parse(fs.readFileSync(SEED_ZONES_FILE, 'utf-8'));
+    }
+    if (fs.existsSync(SEED_SCHEMES_FILE)) {
+      serverSchemes = JSON.parse(fs.readFileSync(SEED_SCHEMES_FILE, 'utf-8'));
+    }
     serverVersion++;
     serverLastUpdated = new Date().toISOString();
     fs.writeFileSync(ZONES_FILE, JSON.stringify(serverZones, null, 2), 'utf-8');
@@ -324,12 +335,17 @@ app.get('/api/health', (req, res) => {
 
 // Setup Vite in development or serve static in production
 async function startServer() {
-  if (process.env.NODE_ENV === 'production' && fs.existsSync(path.resolve(__dirname, 'dist'))) {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+  const distPath = path.resolve(__dirname, 'dist');
+  const isProduction = process.env.NODE_ENV === 'production' || fs.existsSync(distPath);
+
+  if (isProduction && fs.existsSync(distPath)) {
+    console.log(`Serving production bundle from: ${distPath}`);
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist/index.html'));
+      res.sendFile(path.resolve(distPath, 'index.html'));
     });
   } else {
+    console.log('Starting Vite server in development middleware mode...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
