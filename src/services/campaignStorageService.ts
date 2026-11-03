@@ -9,7 +9,10 @@ import {
   saveCampaignBundleToFirestore,
   subscribeToCampaignUpdates as subscribeFirestore,
   SharedCampaignBundle,
+  simulateRemoteDevicePush,
 } from './firebaseService';
+
+export { simulateRemoteDevicePush };
 
 export interface ServerCampaignData {
   zones: ZoneRecord[];
@@ -71,21 +74,46 @@ export async function fetchCampaignDataFromServer(): Promise<ServerCampaignData 
   return null;
 }
 
+export interface RemoteChangeMeta {
+  isRemoteWrite: boolean;
+  version: number;
+  updatedBy?: string;
+  updatedDeviceLabel?: string;
+  updateType?: string;
+  updateSummary?: string;
+  zonesCount: number;
+  schemesCount: number;
+}
+
 /**
- * Real-time cloud subscription across all PCs and devices via Firebase
+ * Real-time cloud subscription across all PCs and devices via Firebase.
+ * Passes remote push metadata so the UI can toast alerts when another device updates data.
  */
 export function subscribeToRealtimeCampaignData(
-  onData: (data: ServerCampaignData) => void
+  onData: (data: ServerCampaignData, meta: RemoteChangeMeta) => void
 ): () => void {
   try {
-    return subscribeFirestore((bundle: SharedCampaignBundle) => {
-      onData({
+    return subscribeFirestore((bundle: SharedCampaignBundle, isRemoteWrite: boolean) => {
+      const data: ServerCampaignData = {
         zones: bundle.zones,
         schemes: bundle.schemes || [],
         version: bundle.version || 1,
         lastUpdated: bundle.lastUpdated || new Date().toISOString(),
         customAdminPassword: bundle.customAdminPassword,
-      });
+      };
+
+      const meta: RemoteChangeMeta = {
+        isRemoteWrite,
+        version: bundle.version || 1,
+        updatedBy: bundle.updatedBy,
+        updatedDeviceLabel: bundle.updatedDeviceLabel,
+        updateType: bundle.updateType,
+        updateSummary: bundle.updateSummary,
+        zonesCount: bundle.zones ? bundle.zones.length : 0,
+        schemesCount: bundle.schemes ? bundle.schemes.length : 0,
+      };
+
+      onData(data, meta);
     });
   } catch (err) {
     console.warn('Could not attach Firestore realtime listener:', err);
@@ -132,6 +160,8 @@ export async function saveZonesToServer(
       zones,
       schemes,
       lastUpdated: new Date().toISOString(),
+      updateType: 'zones',
+      updateSummary: `Updated targets and progress across ${zones.length} zones & administrative cities`,
     });
   } catch (err) {
     console.error('Firestore save failed:', err);
@@ -165,6 +195,8 @@ export async function saveSchemesToServer(
       schemes,
       zones,
       lastUpdated: new Date().toISOString(),
+      updateType: 'schemes',
+      updateSummary: `Updated ${schemes.length} Oromia Irrigation Schemes GIS map data & GPS coordinates`,
     });
   } catch (err) {
     console.error('Firestore scheme save failed:', err);

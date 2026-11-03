@@ -17,6 +17,12 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import { ZoneRecord, IrrigationScheme } from '../types';
 import { INITIAL_ZONES, INITIAL_SCHEMES } from '../data/initialData';
+import {
+  getDeviceId,
+  getDeviceLabel,
+  recordLocalWrite,
+  isRecentLocalWrite,
+} from '../utils/deviceIdentity';
 
 // Initialize Firebase App & Firestore with specified databaseId
 export const app = initializeApp(firebaseConfig);
@@ -97,6 +103,10 @@ export interface SharedCampaignBundle {
   schemes: IrrigationScheme[];
   customAdminPassword?: string;
   updatedBy?: string;
+  updatedByDeviceId?: string;
+  updatedDeviceLabel?: string;
+  updateType?: 'zones' | 'schemes' | 'bundle' | 'general';
+  updateSummary?: string;
 }
 
 const CAMPAIGN_DOC_PATH = 'campaign_bundles/live';
@@ -122,6 +132,8 @@ export async function fetchCampaignBundleFromFirestore(): Promise<SharedCampaign
         zones: INITIAL_ZONES,
         schemes: INITIAL_SCHEMES,
         updatedBy: 'System Baseline',
+        updatedByDeviceId: 'system-baseline',
+        updatedDeviceLabel: 'Oromia BOA Cloud Baseline',
       };
       await setDoc(docRef, initialBundle);
       return initialBundle;
@@ -133,19 +145,46 @@ export async function fetchCampaignBundleFromFirestore(): Promise<SharedCampaign
 }
 
 /**
- * Real-time subscription to campaign updates across all devices & browsers
+ * Real-time subscription to campaign updates across all devices & browsers.
+ * Distinguishes updates pushed by other devices from local changes.
  */
 export function subscribeToCampaignUpdates(
-  onUpdate: (bundle: SharedCampaignBundle) => void
+  onUpdate: (bundle: SharedCampaignBundle, isRemoteWrite: boolean) => void
 ): () => void {
   const docRef = doc(db, 'campaign_bundles', 'live');
+  let isInitialSnapshot = true;
+  let lastKnownVersion = 0;
+
   const unsubscribe = onSnapshot(
     docRef,
     (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data() as SharedCampaignBundle;
         if (Array.isArray(data.zones) && data.zones.length > 0) {
-          onUpdate(data);
+          const currentDeviceId = getDeviceId();
+          const hasPendingWrites = snapshot.metadata.hasPendingWrites;
+
+          // Compute whether this change was pushed by another device
+          let isRemote = false;
+
+          if (!isInitialSnapshot) {
+            const isDifferentDevice =
+              Boolean(data.updatedByDeviceId) && data.updatedByDeviceId !== currentDeviceId;
+            const isVersionIncremented = (data.version || 0) > lastKnownVersion;
+
+            if (isDifferentDevice) {
+              isRemote = true;
+            } else if (!data.updatedByDeviceId && !isRecentLocalWrite() && isVersionIncremented) {
+              isRemote = true;
+            } else if (!hasPendingWrites && !isRecentLocalWrite() && isVersionIncremented) {
+              isRemote = true;
+            }
+          }
+
+          lastKnownVersion = data.version || lastKnownVersion;
+          isInitialSnapshot = false;
+
+          onUpdate(data, isRemote);
         }
       }
     },
@@ -163,6 +202,7 @@ export async function saveCampaignBundleToFirestore(
   bundle: Partial<SharedCampaignBundle>
 ): Promise<boolean> {
   try {
+    recordLocalWrite();
     const docRef = doc(db, 'campaign_bundles', 'live');
     const existingSnap = await getDoc(docRef);
     let currentVersion = 1;
@@ -185,12 +225,65 @@ export async function saveCampaignBundleToFirestore(
       schemes: bundle.schemes || existingSchemes,
       customAdminPassword: bundle.customAdminPassword || existingPwd,
       updatedBy: bundle.updatedBy || 'Oromia BOA Admin Portal',
+      updatedByDeviceId: bundle.updatedByDeviceId || getDeviceId(),
+      updatedDeviceLabel: bundle.updatedDeviceLabel || getDeviceLabel(),
+      updateType: bundle.updateType || 'general',
+      updateSummary: bundle.updateSummary,
     };
 
     await setDoc(docRef, payload, { merge: true });
     return true;
   } catch (error) {
     console.error('Error saving campaign bundle to Firestore:', error);
+    return false;
+  }
+}
+
+/**
+ * Simulates a data push originating from another remote device.
+ * Used for testing the toast notification system directly in the browser or on live demos.
+ */
+export async function simulateRemoteDevicePush(note?: string): Promise<boolean> {
+  try {
+    const docRef = doc(db, 'campaign_bundles', 'live');
+    const existingSnap = await getDoc(docRef);
+    let currentVersion = 1;
+    let existingZones: ZoneRecord[] = INITIAL_ZONES;
+    let existingSchemes: IrrigationScheme[] = INITIAL_SCHEMES;
+
+    if (existingSnap.exists()) {
+      const existingData = existingSnap.data() as SharedCampaignBundle;
+      currentVersion = (existingData.version || 1) + 1;
+      if (Array.isArray(existingData.zones)) existingZones = existingData.zones;
+      if (Array.isArray(existingData.schemes)) existingSchemes = existingData.schemes;
+    }
+
+    const remoteDeviceId = `dev-remote-sim-${Math.random().toString(36).slice(2, 6)}`;
+    const remoteLabels = [
+      'Field Tablet (Adama/East Shewa)',
+      'Regional Hub PC (Bale Zone)',
+      'Arsi Agri-Extension Laptop',
+      'Jimma GIS Field Terminal',
+      'Mobile Field Officer #07',
+    ];
+    const remoteLabel = remoteLabels[Math.floor(Math.random() * remoteLabels.length)];
+
+    const payload: SharedCampaignBundle = {
+      version: currentVersion,
+      lastUpdated: new Date().toISOString(),
+      zones: existingZones,
+      schemes: existingSchemes,
+      updatedBy: remoteLabel,
+      updatedByDeviceId: remoteDeviceId,
+      updatedDeviceLabel: remoteLabel,
+      updateType: 'schemes',
+      updateSummary: note || `Updated irrigation scheme status and GPS records from ${remoteLabel}`,
+    };
+
+    await setDoc(docRef, payload, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Failed to simulate remote device push:', error);
     return false;
   }
 }

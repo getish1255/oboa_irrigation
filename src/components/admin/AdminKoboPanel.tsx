@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ZoneRecord, IrrigationScheme, KoboConfig, Language, KoboSubmission } from '../../types';
 import { syncKoboData, DEFAULT_KOBO_CONFIG, ALL_KOBO_FORMS, KoboAssetItem } from '../../services/koboService';
 import { saveZonesToStorage, INITIAL_ZONES } from '../../data/initialData';
-import { resetServerCampaignData } from '../../services/campaignStorageService';
+import { resetServerCampaignData, simulateRemoteDevicePush } from '../../services/campaignStorageService';
 import { SchemeEditorModal } from '../gis/SchemeEditorModal';
 import Papa from 'papaparse';
 import {
@@ -25,6 +25,7 @@ import {
   MapPin,
   Satellite,
   Search,
+  Sparkles,
 } from 'lucide-react';
 
 interface Props {
@@ -332,6 +333,21 @@ export const AdminKoboPanel: React.FC<Props> = ({
                 : lang === 'om'
                 ? 'Foomota 8 Hunda Wal-simsiisi'
                 : 'Sync All 8 Forms Now'}
+            </button>
+
+            <button
+              onClick={async () => {
+                setSyncLogs(prev => [
+                  `[${new Date().toLocaleTimeString()}] 🚀 Simulating external device push to Firebase Firestore...`,
+                  ...prev,
+                ]);
+                await simulateRemoteDevicePush();
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-sm cursor-pointer"
+              title="Broadcasts sample data from a simulated remote tablet to verify real-time cross-device toast alert"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{lang === 'om' ? 'Mokkisiisa Haaromsa Meeshaa Biraa' : 'Simulate Other Device Push'}</span>
             </button>
           </div>
         </div>

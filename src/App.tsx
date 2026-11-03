@@ -44,6 +44,10 @@ import {
 } from './services/campaignStorageService';
 import { testConnection } from './services/firebaseService';
 import { GlobalSearchBar } from './components/common/GlobalSearchBar';
+import { ToastProvider, useToast } from './components/common/ToastContext';
+import { ToastContainer } from './components/common/ToastContainer';
+import { FuturisticBackground } from './components/common/FuturisticBackground';
+import { getDeviceLabel } from './utils/deviceIdentity';
 import oromiaLogo from './assets/logo.png';
 
 // Icons
@@ -62,10 +66,13 @@ import {
   Loader2,
   RefreshCw,
   Cloud,
+  Bell,
+  Cpu,
 } from 'lucide-react';
 import { exportCampaignDataToCsv } from './utils/csvExport';
 
-export default function App() {
+function AppContent() {
+  const { notifyRemoteFirebaseSync, setIsHistoryOpen, history } = useToast();
   const [lang, setLang] = useState<Language>('en'); // default interface language English as requested
   const [activeTab, setActiveTab] = useState<DashboardTab>('regional_exec');
   const [selectedZoneFilter, setSelectedZoneFilter] = useState<number | 'all'>('all');
@@ -117,7 +124,7 @@ export default function App() {
 
     // 2. Real-time Firebase Firestore listener:
     // Any change made on PC A immediately pushes to PC B, mobile phones, or shared preview links!
-    const unsubscribe = subscribeToRealtimeCampaignData((data) => {
+    const unsubscribe = subscribeToRealtimeCampaignData((data, meta) => {
       if (isMounted && data && Array.isArray(data.zones) && data.zones.length > 0) {
         setZones(data.zones);
         saveZonesToStorage(data.zones);
@@ -128,6 +135,25 @@ export default function App() {
         setServerVersion(data.version);
         setLastSyncedText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         setIsCloudSyncing(false);
+
+        // Alert user via toast notification if this update was pushed by another device
+        if (meta && meta.isRemoteWrite) {
+          notifyRemoteFirebaseSync({
+            version: meta.version,
+            updatedDeviceLabel: meta.updatedDeviceLabel || meta.updatedBy,
+            updateType: meta.updateType,
+            updateSummary: meta.updateSummary,
+            countSummary: `${meta.zonesCount} Zones · ${meta.schemesCount} Schemes`,
+            lang,
+            onNavigate: () => {
+              if (meta.updateType === 'schemes') {
+                setActiveTab('gis_map');
+              } else {
+                setActiveTab('regional_exec');
+              }
+            },
+          });
+        }
       }
     });
 
@@ -261,14 +287,17 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="relative min-h-screen bg-slate-50/85 dark:bg-slate-950/90 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 overflow-x-hidden">
+      {/* Smart Interactive Futuristic Systems Background */}
+      <FuturisticBackground isDarkMode={isDarkMode} />
+
       {/* 
         TOP BAR CONTRACT:
         Zone 1: Single text element wordmark with official Bureau logo
         Zone 2: 4-5 clean single-line text links
         Zone 3: 1 primary action
       */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-8 h-16">
           {/* Zone 1: Brand Wordmark with Official Oromia Bureau Logo */}
           <button
@@ -384,7 +413,7 @@ export default function App() {
       </header>
 
       {/* SECONDARY WORKSPACE TOOLBAR (Below the fold) */}
-      <section className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-2.5 px-4 sm:px-6">
+      <section className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 sm:px-6 relative z-20">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Dashboard Tab Selector */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-1 scrollbar-none">
@@ -455,6 +484,25 @@ export default function App() {
               </span>
             </button>
 
+            {/* Remote Push Alerts & Device Sync History */}
+            <button
+              onClick={() => setIsHistoryOpen(true)}
+              className="relative flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 transition-colors cursor-pointer"
+              title={
+                lang === 'om'
+                  ? `Beeksisa haaromsa Firebase (${history.length} dhufe)`
+                  : `Firebase remote device push alerts (${history.length} received)`
+              }
+            >
+              <Bell className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              <span className="hidden lg:inline">{lang === 'om' ? 'Beeksisa' : 'Sync Alerts'}</span>
+              {history.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-emerald-600 rounded-full animate-pulse">
+                  {history.length}
+                </span>
+              )}
+            </button>
+
             {/* Language Switcher */}
             <button
               onClick={() => setLang(lang === 'om' ? 'en' : 'om')}
@@ -468,10 +516,23 @@ export default function App() {
             {/* Dark / Light Mode Toggle */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
               title="Toggle theme"
             >
               {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Futuristic FX Background trigger */}
+            <button
+              onClick={() => {
+                const btn = document.querySelector('#futuristic-hud-control button') as HTMLButtonElement | null;
+                btn?.click();
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors cursor-pointer"
+              title="Interactive Futuristic Systems Background (Modes, Grid, FX)"
+            >
+              <Cpu className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="hidden xl:inline text-[11px]">FX BG</span>
             </button>
 
             {/* PDF Report Download */}
@@ -502,7 +563,7 @@ export default function App() {
             {/* Print / Export Report */}
             <button
               onClick={handlePrintReport}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
               title={lang === 'om' ? 'Gabaasa Maxxansi' : 'Print Executive Report'}
             >
               <Printer className="w-3.5 h-3.5" />
@@ -512,7 +573,7 @@ export default function App() {
       </section>
 
       {/* MAIN VIEWPORT CANVAS */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
         {activeTab === 'regional_exec' && (
           <RegionalExecutiveDashboard
             zones={displayedZones}
@@ -599,7 +660,7 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 px-4 sm:px-6">
+      <footer className="relative z-10 mt-auto border-t border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md py-6 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-3">
             <img
@@ -641,5 +702,14 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+      <ToastContainer />
+    </ToastProvider>
   );
 }
