@@ -412,162 +412,211 @@ function AppContent() {
         </div>
       </header>
 
-      {/* SECONDARY WORKSPACE TOOLBAR (Below the fold) */}
-      <section className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 sm:px-6 relative z-20">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Dashboard Tab Selector */}
-          <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-1 scrollbar-none">
-            {[
-              { id: 'regional_exec', label: lang === 'om' ? 'Cuunfaa Hooggansaa (17)' : 'Executive Overview (17)' },
-              { id: 'mobilization', label: lang === 'om' ? '0. Sosoochii (0)' : '0. Mobilization (0)' },
-              { id: 'executive_kpis', label: lang === 'om' ? 'KPIs Ijoo (1)' : 'Top 15 KPIs (1)' },
-              { id: 'area_progress', label: lang === 'om' ? 'Adeemsa Facaasaa (2)' : 'Area Progress (2)' },
-              { id: 'input_supply', label: lang === 'om' ? 'Galteewwan (3)' : 'Input Supply (3)' },
-              { id: 'irrigation_infra', label: lang === 'om' ? 'Bu\'uuraalee Jallisii (4)' : 'Irrigation Infra (4)' },
-              { id: 'gis_map', label: lang === 'om' ? 'Kaartaa GIS (5)' : 'GIS Schemes (5)' },
-              { id: 'mechanization', label: lang === 'om' ? 'Mekaanayizeeshinii (6-7)' : 'Mechanization & Farmers (6-7)' },
-              { id: 'cluster_farming', label: lang === 'om' ? 'Kilaastara & Abbootii (8-9)' : 'Clusters & Investors (8-9)' },
-              { id: 'crop_protection', label: lang === 'om' ? 'Eegumsa & Haala (10-11)' : 'Crop Protection (10-11)' },
-              { id: 'harvest_yield', label: lang === 'om' ? 'Sassaabbii & Gabaa (12-13)' : 'Harvest & Price (12-13)' },
-              { id: 'employment', label: lang === 'om' ? 'Hojii & Rakkoolee (14-16)' : 'Jobs, Days & Risk (14-16)' },
-              { id: 'advanced_analytics', label: lang === 'om' ? 'Tilmaama & Qabxii' : 'Analytics & Scorecard' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as DashboardTab)}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 ${
-                  activeTab === tab.id
-                    ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      {/* SECONDARY WORKSPACE TOOLBAR (Smart Multi-Row Architecture) */}
+      <section className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 py-2.5 px-4 sm:px-6 relative z-20 shadow-xs">
+        <div className="max-w-7xl mx-auto space-y-2.5">
+          {/* Row 1: Workspace Utilities & Campaign Live Status Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+            {/* Left: Active Module Breadcrumb / Category Status */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200/60 dark:border-emerald-800/50">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>
+                  {lang === 'om' ? 'Duula 2019/2026' : 'Campaign 2019/2026'}
+                </span>
+                <span className="text-emerald-400">·</span>
+                <span className="font-mono">13 Modules Active</span>
+              </span>
 
-          {/* Right utility controls: Zone Filter, Language Switcher, Theme Switcher, Print */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Zone Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-xs">
-              <Filter className="w-3.5 h-3.5 text-slate-500" />
-              <select
-                value={selectedZoneFilter}
-                onChange={e => setSelectedZoneFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                className="bg-transparent text-slate-800 dark:text-slate-200 font-medium focus:outline-none cursor-pointer"
-              >
-                <option value="all">{lang === 'om' ? 'Godinoota Hunda (14)' : 'All 14 Zones & Cities'}</option>
-                {zones.map(z => (
-                  <option key={z.id} value={z.id}>
-                    {lang === 'om' ? z.name : z.nameEn}
-                  </option>
-                ))}
-              </select>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden lg:inline">
+                {lang === 'om'
+                  ? 'Gabaasa Misooma Qamadii Jallisii Biiroo Qonnaa Oromiyaa'
+                  : 'Oromia Irrigated Wheat Bureau Management & Telemetry'}
+              </span>
             </div>
 
-            {/* Live Multi-Device Cloud Sync Status across all PCs & Devices */}
-            <button
-              onClick={handleManualSync}
-              disabled={isCloudSyncing}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-              title={lang === 'om' ? 'Ragaa Firestore waliin wal-simsiisi (PC hundaaf)' : 'Real-time multi-device cloud sync via Firebase Firestore'}
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <RefreshCw className={`w-3 h-3 ${isCloudSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-500'}`} />
-              <span className="hidden sm:inline">
-                {isCloudSyncing
-                  ? (lang === 'om' ? 'Wal-simsiisaa...' : 'Syncing...')
-                  : (lang === 'om' ? `Cloud Live: ${lastSyncedText}` : `Cloud Live: ${lastSyncedText}`)}
-              </span>
-            </button>
+            {/* Right: Quick Utility Tools */}
+            <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+              {/* Zone Filter */}
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-xs">
+                <Filter className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={selectedZoneFilter}
+                  onChange={e => setSelectedZoneFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="bg-transparent text-slate-800 dark:text-slate-200 font-medium focus:outline-none cursor-pointer text-xs"
+                >
+                  <option value="all">{lang === 'om' ? 'Godinoota Hunda (14)' : 'All 14 Zones & Cities'}</option>
+                  {zones.map(z => (
+                    <option key={z.id} value={z.id}>
+                      {lang === 'om' ? z.name : z.nameEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Remote Push Alerts & Device Sync History */}
-            <button
-              onClick={() => setIsHistoryOpen(true)}
-              className="relative flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 transition-colors cursor-pointer"
-              title={
-                lang === 'om'
-                  ? `Beeksisa haaromsa Firebase (${history.length} dhufe)`
-                  : `Firebase remote device push alerts (${history.length} received)`
-              }
-            >
-              <Bell className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              <span className="hidden lg:inline">{lang === 'om' ? 'Beeksisa' : 'Sync Alerts'}</span>
-              {history.length > 0 && (
-                <span className="inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-emerald-600 rounded-full animate-pulse">
-                  {history.length}
+              {/* Live Multi-Device Cloud Sync */}
+              <button
+                onClick={handleManualSync}
+                disabled={isCloudSyncing}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
+                title={lang === 'om' ? 'Ragaa Firestore waliin wal-simsiisi (PC hundaaf)' : 'Real-time multi-device cloud sync via Firebase Firestore'}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-              )}
-            </button>
+                <RefreshCw className={`w-3 h-3 ${isCloudSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-500'}`} />
+                <span className="hidden sm:inline">
+                  {isCloudSyncing
+                    ? (lang === 'om' ? 'Wal-simsiisaa...' : 'Syncing...')
+                    : (lang === 'om' ? `Live: ${lastSyncedText}` : `Live: ${lastSyncedText}`)}
+                </span>
+              </button>
 
-            {/* Language Switcher */}
-            <button
-              onClick={() => setLang(lang === 'om' ? 'en' : 'om')}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-              title="Switch Language (Afaan Oromoo / English)"
-            >
-              <Globe className="w-3.5 h-3.5 text-slate-500" />
-              <span>{lang === 'om' ? 'Afaan Oromoo' : 'English'}</span>
-            </button>
+              {/* Remote Push Alerts */}
+              <button
+                onClick={() => setIsHistoryOpen(true)}
+                className="relative flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 transition-colors cursor-pointer"
+                title="Sync Alerts"
+              >
+                <Bell className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                <span className="hidden xl:inline">{lang === 'om' ? 'Beeksisa' : 'Alerts'}</span>
+                {history.length > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-emerald-600 rounded-full animate-pulse">
+                    {history.length}
+                  </span>
+                )}
+              </button>
 
-            {/* Dark / Light Mode Toggle */}
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-              title="Toggle theme"
-            >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-            </button>
+              {/* Language Switcher */}
+              <button
+                onClick={() => setLang(lang === 'om' ? 'en' : 'om')}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Switch Language (Afaan Oromoo / English)"
+              >
+                <Globe className="w-3.5 h-3.5 text-slate-500" />
+                <span>{lang === 'om' ? 'Afaan Oromoo' : 'English'}</span>
+              </button>
 
-            {/* Futuristic FX Background trigger */}
-            <button
-              onClick={() => {
-                const btn = document.querySelector('#futuristic-hud-control button') as HTMLButtonElement | null;
-                btn?.click();
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors cursor-pointer"
-              title="Interactive Futuristic Systems Background (Modes, Grid, FX)"
-            >
-              <Cpu className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="hidden xl:inline text-[11px]">FX BG</span>
-            </button>
+              {/* Dark / Light Mode Toggle */}
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Toggle theme"
+              >
+                {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
 
-            {/* PDF Report Download */}
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 transition-colors cursor-pointer disabled:opacity-60"
-              title={lang === 'om' ? 'Gabaasa PDF Buufadhu' : 'Download Executive PDF Report'}
-            >
-              {isGeneratingPdf ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <FileDown className="w-3.5 h-3.5" />
-              )}
-              <span>PDF</span>
-            </button>
+              {/* Futuristic FX Background trigger */}
+              <button
+                onClick={() => {
+                  const btn = document.querySelector('#futuristic-hud-control button') as HTMLButtonElement | null;
+                  btn?.click();
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors cursor-pointer"
+                title="Interactive Futuristic Systems Background"
+              >
+                <Cpu className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="hidden xl:inline text-[11px]">FX</span>
+              </button>
 
-            {/* CSV Data Export for Offline Record Keeping */}
-            <button
-              onClick={handleExportCsv}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/60 transition-colors cursor-pointer"
-              title={lang === 'om' ? 'Ragaa CSV Buufadhu (Offline kuusuuf)' : 'Export all current zone and scheme data to CSV for offline records'}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>CSV</span>
-            </button>
+              {/* PDF Report Download */}
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 transition-colors cursor-pointer disabled:opacity-60"
+                title="Download Executive PDF Report"
+              >
+                {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+                <span>PDF</span>
+              </button>
 
-            {/* Print / Export Report */}
-            <button
-              onClick={handlePrintReport}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-              title={lang === 'om' ? 'Gabaasa Maxxansi' : 'Print Executive Report'}
-            >
-              <Printer className="w-3.5 h-3.5" />
-            </button>
+              {/* CSV Data Export */}
+              <button
+                onClick={handleExportCsv}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/60 transition-colors cursor-pointer"
+                title="Export CSV"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>CSV</span>
+              </button>
+
+              {/* Print Report */}
+              <button
+                onClick={handlePrintReport}
+                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Print Report"
+              >
+                <Printer className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Menu Row 1 - Executive & Strategic Core (Modules 17, 0, 1, 5, Σ) */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 w-36">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>{lang === 'om' ? '1. Hooggansa & GIS' : '1. Executive Core'}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              {[
+                { id: 'regional_exec', num: '17', label: lang === 'om' ? 'Cuunfaa Hooggansaa (17)' : 'Executive Overview (17)' },
+                { id: 'mobilization', num: '0', label: lang === 'om' ? '0. Sosoochii (0)' : '0. Mobilization (0)' },
+                { id: 'executive_kpis', num: '1', label: lang === 'om' ? 'KPIs Ijoo (1)' : 'Top 15 KPIs (1)' },
+                { id: 'gis_map', num: '5', label: lang === 'om' ? 'Kaartaa GIS (5)' : 'GIS Schemes (5)' },
+                { id: 'advanced_analytics', num: 'Σ', label: lang === 'om' ? 'Tilmaama & Qabxii' : 'Analytics & Scorecard' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as DashboardTab)}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer text-xs flex items-center gap-1.5 ${
+                    activeTab === tab.id
+                      ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs font-semibold ring-1 ring-slate-900/10 dark:ring-emerald-400/30'
+                      : 'bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60'
+                  }`}
+                >
+                  <span className={`text-[10px] font-mono px-1 rounded ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                    {tab.num}
+                  </span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 3: Menu Row 2 - Field Operations & Value Chain (Modules 2, 3, 4, 6-7, 8-9, 10-11, 12-13, 14-16) */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+            <div className="flex items-center gap-1.5 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 w-36">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+              <span>{lang === 'om' ? '2. Hojii & Oomisha' : '2. Field & Harvest'}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              {[
+                { id: 'area_progress', num: '2', label: lang === 'om' ? 'Adeemsa Facaasaa (2)' : 'Area Progress (2)' },
+                { id: 'input_supply', num: '3', label: lang === 'om' ? 'Galteewwan (3)' : 'Input Supply (3)' },
+                { id: 'irrigation_infra', num: '4', label: lang === 'om' ? 'Bu\'uuraalee Jallisii (4)' : 'Irrigation Infra (4)' },
+                { id: 'mechanization', num: '6-7', label: lang === 'om' ? 'Mekaanayizeeshinii (6-7)' : 'Mechanization & Farmers (6-7)' },
+                { id: 'cluster_farming', num: '8-9', label: lang === 'om' ? 'Kilaastara & Abbootii (8-9)' : 'Clusters & Investors (8-9)' },
+                { id: 'crop_protection', num: '10-11', label: lang === 'om' ? 'Eegumsa & Haala (10-11)' : 'Crop Protection (10-11)' },
+                { id: 'harvest_yield', num: '12-13', label: lang === 'om' ? 'Sassaabbii & Gabaa (12-13)' : 'Harvest & Price (12-13)' },
+                { id: 'employment', num: '14-16', label: lang === 'om' ? 'Hojii & Rakkoolee (14-16)' : 'Jobs, Days & Risk (14-16)' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as DashboardTab)}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer text-xs flex items-center gap-1.5 ${
+                    activeTab === tab.id
+                      ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs font-semibold ring-1 ring-slate-900/10 dark:ring-emerald-400/30'
+                      : 'bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60'
+                  }`}
+                >
+                  <span className={`text-[10px] font-mono px-1 rounded ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                    {tab.num}
+                  </span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>

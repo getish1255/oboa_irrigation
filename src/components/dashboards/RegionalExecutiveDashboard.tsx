@@ -5,6 +5,7 @@ import { OromiaGisMap } from '../gis/OromiaGisMap';
 import { GaugeChart } from '../charts/Charts';
 import { Sparkline } from '../charts/Sparkline';
 import { HistoricalTrendChart } from './HistoricalTrendChart';
+import { ExecutiveHarvestProgressBarChart } from './ExecutiveHarvestProgressBarChart';
 import oromiaLogo from '../../assets/logo.png';
 import {
   Wheat,
@@ -347,6 +348,9 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
           })}
         </div>
       </div>
+
+      {/* Real-time Harvest Progress Bar: Total Planned vs Actual Harvest (Recharts) */}
+      <ExecutiveHarvestProgressBarChart zones={zones} lang={lang} />
 
       {/* Historical Campaign Trend Line Chart (Week-over-Week Performance) */}
       <HistoricalTrendChart zones={zones} lang={lang} />

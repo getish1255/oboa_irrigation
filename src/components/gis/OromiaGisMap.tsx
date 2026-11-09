@@ -16,6 +16,8 @@ import { IrrigationScheme, Language, ZoneRecord } from '../../types';
 import { SchemeEditorModal } from './SchemeEditorModal';
 import { FloatingMapLegend, ThematicLayer } from './FloatingMapLegend';
 import { SatelliteGisCanvas } from './SatelliteGisCanvas';
+import { GoogleMapsZoneOverlay } from './GoogleMapsZoneOverlay';
+import { ZoneBoundary } from '../../data/oromiaBoundaries';
 import {
   MapPin,
   Layers,
@@ -99,6 +101,12 @@ export const OromiaGisMap: React.FC<Props> = ({
   const [editingScheme, setEditingScheme] = useState<IrrigationScheme | null>(null);
   const [clickedMapCoords, setClickedMapCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isPickingLocation, setIsPickingLocation] = useState(false);
+
+  // Transparent Oromia Regions & Zones Boundary Layer States
+  const [showBoundaries, setShowBoundaries] = useState<boolean>(true);
+  const [boundaryOpacity, setBoundaryOpacity] = useState<number>(0.16);
+  const [showBoundaryLabels, setShowBoundaryLabels] = useState<boolean>(true);
+  const [selectedZoneBoundary, setSelectedZoneBoundary] = useState<ZoneBoundary | null>(null);
 
   // API Key management & resilience against InvalidKeyMapError
   const [rawApiKey, setRawApiKey] = useState<string>(() => {
@@ -472,6 +480,50 @@ export const OromiaGisMap: React.FC<Props> = ({
           ))}
         </div>
 
+        {/* Center-Right: Transparent Boundaries Overlay Toggle */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setShowBoundaries(!showBoundaries)}
+            className={`px-2.5 py-1 text-xs rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 border ${
+              showBoundaries
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 shadow-xs'
+                : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:bg-slate-100'
+            }`}
+            title="Toggle transparent Oromia regional & zone boundary overlay"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-emerald-500" />
+            <span>{isOromo ? 'Daangaa Godinaalee' : 'Zone Boundaries'}</span>
+            <span
+              className={`text-[10px] px-1 rounded font-mono ${
+                showBoundaries
+                  ? 'bg-emerald-200 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200'
+                  : 'bg-slate-200 dark:bg-slate-600 text-slate-500'
+              }`}
+            >
+              {showBoundaries ? 'ON' : 'OFF'}
+            </span>
+          </button>
+
+          {showBoundaries && (
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-600 text-[10px]">
+              <span className="text-slate-400">Opacity:</span>
+              {[0.12, 0.22, 0.35].map((op) => (
+                <button
+                  key={op}
+                  onClick={() => setBoundaryOpacity(op)}
+                  className={`px-1.5 py-0.5 rounded cursor-pointer font-mono font-semibold ${
+                    boundaryOpacity === op
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {Math.round(op * 100)}%
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Right: Search & Status Filter */}
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -625,6 +677,15 @@ export const OromiaGisMap: React.FC<Props> = ({
                   </div>
                 </InfoWindow>
               )}
+
+              {/* Transparent Oromia Regions & Zones Boundary Overlay on Google Maps */}
+              <GoogleMapsZoneOverlay
+                isVisible={showBoundaries}
+                opacity={boundaryOpacity}
+                showLabels={showBoundaryLabels}
+                onSelectZoneBoundary={setSelectedZoneBoundary}
+                lang={lang}
+              />
             </Map>
           </APIProvider>
         ) : (
@@ -642,7 +703,78 @@ export const OromiaGisMap: React.FC<Props> = ({
             onUpdateSchemes={onUpdateSchemes}
             lang={lang}
             getMarkerPinConfig={getMarkerPinConfig}
+            showBoundaries={showBoundaries}
+            boundaryOpacity={boundaryOpacity}
+            showBoundaryLabels={showBoundaryLabels}
+            onSelectZoneBoundary={setSelectedZoneBoundary}
           />
+        )}
+
+        {/* Floating Zone Boundary Telemetry Card */}
+        {selectedZoneBoundary && (
+          <div className="absolute top-4 right-4 z-25 p-3.5 rounded-xl bg-slate-900/95 text-white border border-slate-700/80 shadow-2xl backdrop-blur-md text-xs min-w-[260px] max-w-[320px] animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: selectedZoneBoundary.color }}
+                />
+                <div>
+                  <h4 className="font-bold text-sm text-slate-100">
+                    {isOromo ? selectedZoneBoundary.nameOm : selectedZoneBoundary.nameEn}
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Zone Code: {selectedZoneBoundary.code} · Boundary Active
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedZoneBoundary(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">River Basin:</span>
+                <span className="font-semibold text-right">{selectedZoneBoundary.basin}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">Total Schemes:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {effectiveSchemes.filter(s =>
+                    s.zoneName?.toLowerCase().includes(selectedZoneBoundary.code.toLowerCase()) ||
+                    s.zoneName?.toLowerCase().includes(selectedZoneBoundary.nameEn.toLowerCase().split(' ')[0])
+                  ).length} schemes in zone
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span className="text-slate-400">GPS Coordinates:</span>
+                <span className="font-mono text-[10px] text-slate-300">
+                  {selectedZoneBoundary.center.lat.toFixed(2)}°N, {selectedZoneBoundary.center.lng.toFixed(2)}°E
+                </span>
+              </div>
+            </div>
+
+            {selectedZoneBoundary.majorSchemes.length > 0 && (
+              <div className="pt-2 mt-2 border-t border-slate-800/80">
+                <span className="text-[10px] text-slate-400 block mb-1">Key Schemes in Zone:</span>
+                <div className="flex flex-wrap gap-1">
+                  {selectedZoneBoundary.majorSchemes.map((ms, i) => (
+                    <span
+                      key={i}
+                      className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-800 text-slate-300 border border-slate-700/60"
+                    >
+                      {ms}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Floating Interactive Legend Control */}

@@ -2,6 +2,7 @@ import React from 'react';
 import { ZoneRecord, IrrigationScheme, Language } from '../../types';
 import { getTotals } from '../../data/initialData';
 import { getTranslation } from '../../data/translations';
+import { ExecutiveKpisTrendLineChart } from './ExecutiveKpisTrendLineChart';
 import {
   Wheat,
   Tractor,
@@ -249,6 +250,13 @@ export const ExecutiveKpis: React.FC<Props> = ({ zones, schemes, lang }) => {
           );
         })}
       </div>
+
+      {/* Month-over-Month Performance Growth Trendline for Top 5 KPIs (Recharts) */}
+      <ExecutiveKpisTrendLineChart
+        zones={zones}
+        schemes={schemes}
+        lang={lang}
+      />
     </div>
   );
 };

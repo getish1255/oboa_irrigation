@@ -7,6 +7,11 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { IrrigationScheme, Language } from '../../types';
 import { ThematicLayer } from './FloatingMapLegend';
 import {
+  OROMIA_ZONE_BOUNDARIES,
+  OROMIA_REGIONAL_OUTLINE,
+  ZoneBoundary,
+} from '../../data/oromiaBoundaries';
+import {
   Plus,
   Minus,
   RotateCcw,
@@ -19,6 +24,7 @@ import {
   Layers,
   Crosshair,
   ExternalLink,
+  Shield,
 } from 'lucide-react';
 
 interface Props {
@@ -39,6 +45,10 @@ interface Props {
     borderColor: string;
     glyphColor: string;
   };
+  showBoundaries?: boolean;
+  boundaryOpacity?: number;
+  showBoundaryLabels?: boolean;
+  onSelectZoneBoundary?: (zone: ZoneBoundary | null) => void;
 }
 
 // Slippy Map Math (Web Mercator EPSG:3857)
@@ -71,9 +81,14 @@ export const SatelliteGisCanvas: React.FC<Props> = ({
   onUpdateSchemes,
   lang,
   getMarkerPinConfig,
+  showBoundaries = true,
+  boundaryOpacity = 0.15,
+  showBoundaryLabels = true,
+  onSelectZoneBoundary,
 }) => {
   const isOromo = lang === 'om';
   const containerRef = useRef<HTMLDivElement>(null);
+  const [hoveredZone, setHoveredZone] = useState<ZoneBoundary | null>(null);
 
   // Center on Oromia, Ethiopia (lat: 8.54, lng: 39.27, zoom: 7)
   const [center, setCenter] = useState<{ lat: number; lng: number }>({ lat: 8.54, lng: 39.27 });
@@ -284,6 +299,121 @@ export const SatelliteGisCanvas: React.FC<Props> = ({
 
       {/* Grid Overlay / Vignette */}
       <div className="absolute inset-0 pointer-events-none bg-radial from-transparent via-transparent to-black/35" />
+
+      {/* Transparent Oromia Regions & Zones Boundary Layer */}
+      {showBoundaries && (
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-hidden">
+          {/* Regional Outer Outline */}
+          <polygon
+            points={OROMIA_REGIONAL_OUTLINE.map((p) => {
+              const { px, py } = project(p.lat, p.lng);
+              return `${px},${py}`;
+            }).join(' ')}
+            fill="rgba(16, 185, 129, 0.04)"
+            stroke="#10b981"
+            strokeWidth={2.5}
+            strokeDasharray="6 3"
+          />
+
+          {/* Individual Zone Boundary Polygons */}
+          {OROMIA_ZONE_BOUNDARIES.map((zone) => {
+            const points = zone.coordinates.map((p) => {
+              const { px, py } = project(p.lat, p.lng);
+              return `${px},${py}`;
+            }).join(' ');
+
+            const isHovered = hoveredZone?.id === zone.id;
+
+            return (
+              <polygon
+                key={zone.id}
+                points={points}
+                fill={zone.fillColor}
+                stroke={zone.color}
+                strokeWidth={isHovered ? 3.0 : 1.8}
+                strokeDasharray="4 2"
+                style={{
+                  opacity: isHovered ? Math.min(1.0, boundaryOpacity + 0.25) : boundaryOpacity,
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s, stroke-width 0.2s',
+                }}
+                onMouseEnter={() => {
+                  setHoveredZone(zone);
+                  onSelectZoneBoundary?.(zone);
+                }}
+                onMouseLeave={() => {
+                  setHoveredZone(null);
+                  onSelectZoneBoundary?.(null);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectZoneBoundary?.(zone);
+                }}
+              />
+            );
+          })}
+        </svg>
+      )}
+
+      {/* Zone Center Label Badges */}
+      {showBoundaries && showBoundaryLabels && (
+        <div className="absolute inset-0 pointer-events-none z-15">
+          {OROMIA_ZONE_BOUNDARIES.map((zone) => {
+            const { px, py } = project(zone.center.lat, zone.center.lng);
+            if (
+              px < -60 ||
+              px > dimensions.width + 60 ||
+              py < -60 ||
+              py > dimensions.height + 60
+            ) {
+              return null;
+            }
+
+            const isHovered = hoveredZone?.id === zone.id;
+
+            return (
+              <div
+                key={`label-${zone.id}`}
+                style={{ left: `${px}px`, top: `${py}px` }}
+                className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectZoneBoundary?.(zone);
+                }}
+                onMouseEnter={() => {
+                  setHoveredZone(zone);
+                  onSelectZoneBoundary?.(zone);
+                }}
+                onMouseLeave={() => {
+                  setHoveredZone(null);
+                  onSelectZoneBoundary?.(null);
+                }}
+              >
+                <div
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-tight shadow-sm border backdrop-blur-md flex items-center gap-1.5 transition-all ${
+                    isHovered ? 'scale-110 ring-2 ring-white/50' : ''
+                  }`}
+                  style={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+                    borderColor: zone.color,
+                    color: '#ffffff',
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: zone.color }}
+                  />
+                  <span>{zone.code}</span>
+                  <span className="text-slate-300 font-normal">
+                    {lang === 'om' ? zone.nameOm : zone.nameEn}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Picking Location Notice Bar */}
       {isPickingLocation && (
