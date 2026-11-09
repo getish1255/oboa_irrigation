@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ZoneRecord, IrrigationScheme, Language } from '../../types';
 import { getTotals } from '../../data/initialData';
 import { OromiaGisMap } from '../gis/OromiaGisMap';
@@ -6,6 +6,8 @@ import { GaugeChart } from '../charts/Charts';
 import { Sparkline } from '../charts/Sparkline';
 import { HistoricalTrendChart } from './HistoricalTrendChart';
 import { ExecutiveHarvestProgressBarChart } from './ExecutiveHarvestProgressBarChart';
+import { ZoneSideBySideComparison } from './ZoneSideBySideComparison';
+import { ExecutiveGuidedTour } from './ExecutiveGuidedTour';
 import oromiaLogo from '../../assets/logo.png';
 import {
   Wheat,
@@ -21,6 +23,7 @@ import {
   AlertTriangle,
   FileText,
   ArrowUpRight,
+  Compass,
 } from 'lucide-react';
 
 interface Props {
@@ -37,6 +40,28 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
   onNavigateTab,
 }) => {
   const totals = getTotals(zones);
+
+  // Guided Tour overlay state (auto-opens on first load, can be re-triggered anytime)
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem('oromia_boa_tour_seen_v1');
+    if (!seen) {
+      const timer = setTimeout(() => {
+        setIsTourOpen(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleCloseTour = () => {
+    setIsTourOpen(false);
+    localStorage.setItem('oromia_boa_tour_seen_v1', 'true');
+  };
+
+  const handleStartTour = () => {
+    setIsTourOpen(true);
+  };
 
   const totalSchemes = schemes.length;
   const functionalSchemes = schemes.filter(s => s.status === 'functional').length;
@@ -233,7 +258,10 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
   return (
     <div className="space-y-6">
       {/* Bureau Executive Hero Banner with Generated Photography & Official Emblem */}
-      <div className="relative rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 bg-slate-900 text-white min-h-[220px] flex items-end p-6 md:p-8">
+      <div
+        id="tour-hero-banner"
+        className="relative rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 bg-slate-900 text-white min-h-[220px] flex items-end p-6 md:p-8"
+      >
         <img
           src="/src/assets/images/oromia_wheat_irrigation_hero_1793508977362.jpg"
           alt="Oromia Irrigated Wheat Fields"
@@ -272,11 +300,23 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
               In collaboration with IQQO (Addisu H. and Getachew H.)
             </div>
           </div>
+
+          {/* Guided Tour Trigger Button */}
+          <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+            <button
+              onClick={handleStartTour}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md text-xs font-semibold shadow-lg transition-all cursor-pointer group hover:scale-[1.02]"
+              title={lang === 'om' ? 'Daawwannaa Qajeelfamaa Jalqabi' : 'Start Guided Overview Tour'}
+            >
+              <Compass className="w-4 h-4 text-emerald-400 group-hover:rotate-45 transition-transform duration-300" />
+              <span>{lang === 'om' ? 'Daawwannaa Qajeelfamaa' : 'Guided Tour'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 14 Power BI Style Metric Indicator Tiles with Daily Progress Sparklines */}
-      <div className="space-y-3">
+      <div id="tour-kpi-tiles" className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -293,9 +333,19 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
                 : 'Interactive daily trend sparklines showing 10-day velocity across all campaign sections'}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-md self-start sm:self-auto shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Daily Telemetry Active · 10-Day Progress</span>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleStartTour}
+              className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/80 px-2.5 py-1 rounded-md transition-colors cursor-pointer shadow-xs"
+              title={lang === 'om' ? 'Daawwannaa Qajeelfamaa Jalqabi' : 'Take Guided Tour'}
+            >
+              <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{lang === 'om' ? 'Daawwannaa' : 'Take Tour'}</span>
+            </button>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-md shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Daily Telemetry Active · 10-Day Progress</span>
+            </div>
           </div>
         </div>
 
@@ -350,13 +400,22 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
       </div>
 
       {/* Real-time Harvest Progress Bar: Total Planned vs Actual Harvest (Recharts) */}
-      <ExecutiveHarvestProgressBarChart zones={zones} lang={lang} />
+      <div id="tour-harvest-progress">
+        <ExecutiveHarvestProgressBarChart zones={zones} lang={lang} />
+      </div>
+
+      {/* Side-by-Side Zone Comparison Mode */}
+      <div id="tour-side-by-side">
+        <ZoneSideBySideComparison zones={zones} lang={lang} />
+      </div>
 
       {/* Historical Campaign Trend Line Chart (Week-over-Week Performance) */}
       <HistoricalTrendChart zones={zones} lang={lang} />
 
       {/* Interactive Regional GIS Map Section */}
-      <OromiaGisMap schemes={schemes} lang={lang} />
+      <div id="tour-gis-schemes">
+        <OromiaGisMap schemes={schemes} lang={lang} />
+      </div>
 
       {/* Zone Performance Table Snapshot */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
@@ -419,6 +478,13 @@ export const RegionalExecutiveDashboard: React.FC<Props> = ({
           </table>
         </div>
       </div>
+
+      {/* Lightweight Guided Tour Overlay */}
+      <ExecutiveGuidedTour
+        isOpen={isTourOpen}
+        onClose={handleCloseTour}
+        lang={lang}
+      />
     </div>
   );
 };
